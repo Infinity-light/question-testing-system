@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}{{ '编辑问题' if question else '添加问题' }} - AI问题测试系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <h2 class="mb-4">{{ '编辑问题' if question else '添加问题' }}</h2>
+
+        <form method="POST" id="questionForm">
+            <div class="mb-3">
+                <label for="title" class="form-label">标题 <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="title" name="title"
+                       value="{{ question.title if question else (form_data.title if form_data else '') }}" required>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="question_type" class="form-label">题目类型 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="question_type" name="question_type"
+                           value="{{ question.question_type if question else (form_data.question_type if form_data else '') }}"
+                           placeholder="例如: 选择题, 计算题, 证明题" required>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="subject" class="form-label">领域 <span class="text-danger">*</span></label>
+                    {% set current_subject = question.subject if question else (form_data.subject if form_data else '') %}
+                    {% set predefined_subjects = ['数学', '物理', '化学', '生物', '法律', '金融', '医学'] %}
+                    {% set is_custom = current_subject and current_subject not in predefined_subjects %}
+                    <select class="form-select" id="subject_select" name="subject" required>
+                        <option value="">请选择...</option>
+                        <option value="数学" {{ 'selected' if current_subject == '数学' else '' }}>数学</option>
+                        <option value="物理" {{ 'selected' if current_subject == '物理' else '' }}>物理</option>
+                        <option value="化学" {{ 'selected' if current_subject == '化学' else '' }}>化学</option>
+                        <option value="生物" {{ 'selected' if current_subject == '生物' else '' }}>生物</option>
+                        <option value="法律" {{ 'selected' if current_subject == '法律' else '' }}>法律</option>
+                        <option value="金融" {{ 'selected' if current_subject == '金融' else '' }}>金融</option>
+                        <option value="医学" {{ 'selected' if current_subject == '医学' else '' }}>医学</option>
+                        <option value="custom" {{ 'selected' if is_custom else '' }}>自定义...</option>
+                    </select>
+                    <input type="text" class="form-control mt-2" id="custom_subject" name="custom_subject"
+                           placeholder="请输入自定义领域"
+                           value="{{ current_subject if is_custom else '' }}"
+                           style="display: {{ 'block' if is_custom else 'none' }}">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="difficulty" class="form-label">难度 <span class="text-danger">*</span></label>
+                    <select class="form-select" id="difficulty" name="difficulty" required>
+                        <option value="">请选择...</option>
+                        {% set current_difficulty = question.difficulty if question else (form_data.difficulty if form_data else '') %}
+                        <option value="高中" {{ 'selected' if current_difficulty == '高中' else '' }}>高中</option>
+                        <option value="大学" {{ 'selected' if current_difficulty == '大学' else '' }}>大学</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="knowledge_points" class="form-label">知识点 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="knowledge_points" name="knowledge_points"
+                           value="{{ question.knowledge_points if question else (form_data.knowledge_points if form_data else '') }}"
+                           placeholder="用逗号分隔多个知识点" required>
+                    <small class="form-text text-muted">例如: 微积分, 导数, 极限</small>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="question_text" class="form-label">问题 (LaTeX格式) <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="question_text" name="question_text" rows="5" required>{{ question.question_text if question else (form_data.question_text if form_data else '') }}</textarea>
+                <small class="form-text text-muted">使用LaTeX格式输入数学公式，例如: $\int_0^1 x^2 dx$</small>
+
+                <div class="latex-preview mt-2">
+                    <strong>预览:</strong>
+                    <div id="questionPreview"></div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="standard_answer" class="form-label">标准答案 (LaTeX格式) <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="standard_answer" name="standard_answer" rows="3" required>{{ question.standard_answer if question else (form_data.standard_answer if form_data else '') }}</textarea>
+
+                <div class="latex-preview mt-2">
+                    <strong>预览:</strong>
+                    <div id="answerPreview"></div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="solution_approach" class="form-label">解题思路 (LaTeX格式) <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="solution_approach" name="solution_approach" rows="5" required>{{ question.solution_approach if question else (form_data.solution_approach if form_data else '') }}</textarea>
+
+                <div class="latex-preview mt-2">
+                    <strong>预览:</strong>
+                    <div id="solutionPreview"></div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">{{ '更新问题' if question else '创建问题' }}</button>
+                <a href="{{ url_for('questions.index') }}" class="btn btn-secondary">取消</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Custom subject handling
+    const subjectSelect = document.getElementById('subject_select');
+    const customSubjectInput = document.getElementById('custom_subject');
+
+    subjectSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            customSubjectInput.style.display = 'block';
+            customSubjectInput.required = true;
+            customSubjectInput.focus();
+        } else {
+            customSubjectInput.style.display = 'none';
+            customSubjectInput.required = false;
+            customSubjectInput.value = '';
+        }
+    });
+
+    // On form submit, replace subject value with custom input if "custom" is selected
+    document.getElementById('questionForm').addEventListener('submit', function(e) {
+        if (subjectSelect.value === 'custom') {
+            var customVal = customSubjectInput.value.trim();
+            if (!customVal) {
+                e.preventDefault();
+                alert('请输入自定义领域');
+                return;
+            }
+            var customOption = subjectSelect.querySelector('option[value="custom"]');
+            customOption.value = customVal;
+            subjectSelect.value = customVal;
+        }
+    });
+
+    // LaTeX preview
+    const questionTextArea = document.getElementById('question_text');
+    const questionPreview = document.getElementById('questionPreview');
+    const answerTextArea = document.getElementById('standard_answer');
+    const answerPreview = document.getElementById('answerPreview');
+    const solutionTextArea = document.getElementById('solution_approach');
+    const solutionPreview = document.getElementById('solutionPreview');
+
+    function updatePreview() {
+        questionPreview.textContent = questionTextArea.value;
+        answerPreview.textContent = answerTextArea.value;
+        solutionPreview.textContent = solutionTextArea.value;
+        MathJax.typesetPromise([questionPreview, answerPreview, solutionPreview]).catch((err) => console.log(err));
+    }
+
+    questionTextArea.addEventListener('input', updatePreview);
+    answerTextArea.addEventListener('input', updatePreview);
+    solutionTextArea.addEventListener('input', updatePreview);
+    updatePreview();
+</script>
+{% endblock %}

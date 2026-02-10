@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}申请成为审核员 - AI问题测试系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">申请成为审核员</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>审核员权限：</strong>
+                    <ul class="mb-0">
+                        <li>可以对所有题目进行人工审核</li>
+                        <li>可以查看所有测试结果</li>
+                        <li>拥有普通用户的所有权限</li>
+                    </ul>
+                </div>
+                <form method="POST" action="{{ url_for('auth.apply_reviewer') }}">
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">申请理由 <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="reason" name="reason" rows="5"
+                                  required minlength="10"
+                                  placeholder="请说明您申请成为审核员的理由（至少10个字符）..."></textarea>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-warning">提交申请</button>
+                        <a href="{{ url_for('questions.index') }}" class="btn btn-secondary">取消</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

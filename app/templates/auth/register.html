@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}注册 - AI问题测试系统{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">用户注册</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    注册后您将成为普通用户，可以上传题目并查看自己题目的审核结果。
+                </div>
+                <form method="POST" action="{{ url_for('auth.register') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               required minlength="3" autofocus>
+                        <div class="form-text">至少3个字符</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="real_name" class="form-label">真实姓名</label>
+                        <input type="text" class="form-control" id="real_name" name="real_name"
+                               required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="organization" class="form-label">所在单位</label>
+                        <input type="text" class="form-control" id="organization" name="organization"
+                               required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">密码</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               required minlength="6">
+                        <div class="form-text">至少6个字符</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">确认密码</label>
+                        <input type="password" class="form-control" id="confirm_password"
+                               name="confirm_password" required minlength="6">
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">注册</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                已有账号？<a href="{{ url_for('auth.login') }}">立即登录</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}人工审核 - AI问题测试系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>人工审核</h2>
+            <div>
+                <a href="{{ url_for('testing.review_list') }}" class="btn btn-secondary">返回审核列表</a>
+            </div>
+        </div>
+
+        <!-- Question Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">问题信息</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>标题:</strong> {{ test_result.question.title }}</p>
+                        <p><strong>类型:</strong> {{ test_result.question.question_type }}</p>
+                        <p><strong>领域:</strong> {{ test_result.question.subject }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>难度:</strong> {{ test_result.question.difficulty }}</p>
+                        <p><strong>知识点:</strong> {{ test_result.question.knowledge_points }}</p>
+                    </div>
+                </div>
+
+                <p><strong>问题文本:</strong></p>
+                <div class="latex-preview mb-3 p-3 bg-light border rounded">
+                    {{ test_result.question.question_text }}
+                </div>
+
+                <p><strong>标准答案:</strong></p>
+                <div class="alert alert-success">
+                    {{ test_result.question.standard_answer }}
+                </div>
+
+                <p><strong>解题思路:</strong></p>
+                <div class="alert alert-info">
+                    {{ test_result.question.solution_approach }}
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Test Results Summary -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">大模型测试结果</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>测试日期:</strong> {{ test_result.test_date.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        <p><strong>总尝试次数:</strong> {{ test_result.total_attempts }}</p>
+                        <p><strong>正确次数:</strong> {{ test_result.correct_count }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>成功率:</strong>
+                            <span class="badge bg-{{ 'success' if test_result.success_rate < 50 else 'danger' }} fs-6">
+                                {{ test_result.success_rate }}%
+                            </span>
+                        </p>
+                        <p><strong>大模型判定:</strong>
+                            {% if test_result.qualified %}
+                                <span class="badge bg-success fs-6">合格 ✓</span>
+                            {% else %}
+                                <span class="badge bg-danger fs-6">不合格 ✗</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8 Test Attempts Details -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">8次测试详情</h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="testAttemptsAccordion">
+                    {% for log in api_logs %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading{{ log.id }}">
+                            <button class="accordion-button {{ 'collapsed' if loop.index > 1 else '' }}" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#collapse{{ log.id }}"
+                                    aria-expanded="{{ 'true' if loop.index == 1 else 'false' }}"
+                                    aria-controls="collapse{{ log.id }}">
+                                <strong>尝试 #{{ log.attempt_number }}</strong>
+                                <span class="ms-3">
+                                    {% if log.is_correct %}
+                                        <span class="badge bg-success">✓ 正确</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">✗ 错误</span>
+                                    {% endif %}
+                                </span>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ log.id }}" class="accordion-collapse collapse {{ 'show' if loop.index == 1 else '' }}"
+                             aria-labelledby="heading{{ log.id }}" data-bs-parent="#testAttemptsAccordion">
+                            <div class="accordion-body">
+                                <p><strong>时间:</strong> {{ log.call_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+
+                                {% if log.error_message %}
+                                    <div class="alert alert-danger">
+                                        <strong>错误:</strong> {{ log.error_message }}
+                                    </div>
+                                {% else %}
+                                    <p><strong>AI答案:</strong></p>
+                                    <div class="alert alert-light border">
+                                        {{ log.ai_answer }}
+                                    </div>
+
+                                    <p><strong>验证响应:</strong></p>
+                                    <div class="alert alert-light border">
+                                        {{ log.verification_response }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Review Form -->
+        <div class="card mb-4 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">人工审核</h5>
+            </div>
+            <div class="card-body">
+                {% if test_result.manual_review_status != 'pending' %}
+                <div class="alert alert-info">
+                    <strong>当前审核状态:</strong>
+                    {% if test_result.manual_review_status == 'approved' %}
+                        <span class="badge bg-success">通过</span>
+                    {% elif test_result.manual_review_status == 'rejected' %}
+                        <span class="badge bg-danger">不通过</span>
+                    {% endif %}
+                    <br>
+                    <strong>审核人员:</strong> {{ test_result.manual_reviewed_by }}
+                    <br>
+                    <strong>审核时间:</strong> {{ test_result.manual_review_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                    {% if test_result.manual_review_comment %}
+                    <br>
+                    <strong>审核备注:</strong> {{ test_result.manual_review_comment }}
+                    {% endif %}
+                </div>
+                <p class="text-muted">您可以重新审核此测试结果</p>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('testing.review_test', test_result_id=test_result.id) }}">
+                    <div class="mb-3">
+                        <p><strong>审核人员:</strong> {{ current_user.username }}</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">审核决定 <span class="text-danger">*</span></label>
+                        <div class="d-grid gap-3">
+                            <button type="submit" name="decision" value="approved" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> 通过
+                            </button>
+                            <button type="submit" name="decision" value="rejected" class="btn btn-danger btn-lg">
+                                <i class="bi bi-x-circle"></i> 不通过
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">审核备注（可选）</label>
+                        <textarea class="form-control" id="comment" name="comment" rows="3"
+                                  placeholder="请输入审核备注...">{{ test_result.manual_review_comment or '' }}</textarea>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

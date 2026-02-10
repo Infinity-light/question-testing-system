@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}测试进行中 - AI问题测试系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">正在测试问题</h4>
+            </div>
+            <div class="card-body">
+                <h5 id="questionTitle">{{ question.title }}</h5>
+
+                <!-- Progress Bar -->
+                <div class="mt-4 mb-4">
+                    <h6>测试进度</h6>
+                    <div class="progress" style="height: 30px;">
+                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                             role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="8">
+                            <span id="progressText">0 / 8</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Message -->
+                <div class="alert alert-info" id="statusMessage">
+                    <strong>状态：</strong><span id="statusText">准备开始测试...</span>
+                </div>
+
+                <!-- Test Logs -->
+                <div class="mt-4">
+                    <h6>测试日志</h6>
+                    <div id="testLogs" class="border rounded p-3" style="max-height: 400px; overflow-y: auto; background-color: #f8f9fa;">
+                        <p class="text-muted">等待测试开始...</p>
+                    </div>
+                </div>
+
+                <!-- Completion Message (hidden initially) -->
+                <div id="completionMessage" class="alert alert-success mt-4" style="display: none;">
+                    <h5>✓ 测试完成！</h5>
+                    <p>正确次数: <strong id="correctCount">0</strong> / <strong id="totalAttempts">8</strong></p>
+                    <p>成功率: <strong id="successRate">0%</strong></p>
+                    <a id="viewResultLink" href="#" class="btn btn-primary">查看详细结果</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const testResultId = {{ test_result_id }};
+    let pollInterval;
+    let displayedLogs = new Set();
+
+    function updateProgress(data) {
+        const completed = data.completed_attempts;
+        const total = data.total_attempts;
+        const percentage = (completed / total) * 100;
+
+        // Update progress bar
+        document.getElementById('progressBar').style.width = percentage + '%';
+        document.getElementById('progressBar').setAttribute('aria-valuenow', completed);
+        document.getElementById('progressText').textContent = completed + ' / ' + total;
+
+        // Update status
+        if (data.is_complete) {
+            document.getElementById('statusText').textContent = '测试已完成！';
+            document.getElementById('progressBar').classList.remove('progress-bar-animated');
+            document.getElementById('progressBar').classList.add('bg-success');
+
+            // Show completion message
+            document.getElementById('correctCount').textContent = data.correct_count;
+            document.getElementById('totalAttempts').textContent = total;
+            document.getElementById('successRate').textContent = ((data.correct_count / total) * 100).toFixed(1) + '%';
+            document.getElementById('completionMessage').style.display = 'block';
+            document.getElementById('viewResultLink').href = '/testing/result/' + testResultId;
+
+            // Stop polling
+            clearInterval(pollInterval);
+        } else {
+            document.getElementById('statusText').textContent = '正在进行第 ' + (completed + 1) + ' 次测试...';
+        }
+
+        // Display real logs from API
+        if (data.logs && data.logs.length > 0) {
+            data.logs.forEach(log => {
+                if (!displayedLogs.has(log.attempt_number)) {
+                    const message = log.error_message ? '测试出错' : (log.ai_answer ? '测试完成' : '测试中...');
+                    addLogEntry(log.attempt_number, message, log.is_correct);
+                    displayedLogs.add(log.attempt_number);
+                }
+            });
+        }
+    }
+
+    function addLogEntry(attempt, message, isCorrect) {
+        const logsDiv = document.getElementById('testLogs');
+        const entry = document.createElement('div');
+        entry.className = 'mb-2 p-2 border-bottom';
+
+        const icon = isCorrect ? '✓' : '✗';
+        const color = isCorrect ? 'text-success' : 'text-danger';
+
+        entry.innerHTML = `<strong class="${color}">[尝试 ${attempt}] ${icon}</strong> ${message}`;
+        logsDiv.appendChild(entry);
+
+        // Auto scroll to bottom
+        logsDiv.scrollTop = logsDiv.scrollHeight;
+    }
+
+    function pollProgress() {
+        fetch('/testing/progress/' + testResultId)
+            .then(response => response.json())
+            .then(data => {
+                updateProgress(data);
+            })
+            .catch(error => {
+                console.error('Error polling progress:', error);
+                document.getElementById('statusText').textContent = '获取进度时出错';
+            });
+    }
+
+    // Start polling when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Clear initial message
+        document.getElementById('testLogs').innerHTML = '';
+
+        // Poll every 1 second
+        pollInterval = setInterval(pollProgress, 1000);
+
+        // Initial poll
+        pollProgress();
+    });
+</script>
+{% endblock %}

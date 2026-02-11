@@ -1,0 +1,20 @@
+services:
+  question-testing-system:
+    image: ghcr.io/${GITHUB_USER}/question-testing-system:latest
+    container_name: question-testing-system
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    volumes:
+      - question-testing-system-data:/app/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  question-testing-system-data:
